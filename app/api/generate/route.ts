@@ -73,7 +73,11 @@ export async function POST(request: NextRequest) {
 
   if (!tryOnResult.ok) {
     return NextResponse.json(
-      { error: tryOnResult.errorMessage },
+      {
+        error: tryOnResult.errorMessage,
+        predictionId: tryOnResult.predictionId,
+        predictionStage: "tryon",
+      },
       { status: 422 }
     );
   }
@@ -89,7 +93,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!editResult.ok) {
-      return NextResponse.json({ error: editResult.errorMessage }, { status: 422 });
+      return NextResponse.json(
+        {
+          error: editResult.errorMessage,
+          predictionId: editResult.predictionId,
+          predictionStage: "edit",
+        },
+        { status: 422 }
+      );
     }
     finalUrl = editResult.outputUrl;
   }

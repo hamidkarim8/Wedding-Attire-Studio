@@ -1,6 +1,11 @@
 export type PollResult =
-  | { ok: true; outputUrl: string }
-  | { ok: false; errorMessage: string; error?: unknown };
+  | { ok: true; outputUrl: string; predictionId: string }
+  | { ok: false; errorMessage: string; error?: unknown; predictionId?: string };
+
+export type PredictionStatusResult =
+  | { status: "completed"; outputUrl: string }
+  | { status: "failed"; errorMessage: string; error?: unknown }
+  | { status: "processing" };
 
 const POLL_INTERVAL_MS = 3000;
 const THREE_MINUTES_MS = 180_000;
@@ -120,6 +125,27 @@ async function pollStatusOnce(
   };
 }
 
+export async function getPredictionStatus(
+  apiKey: string,
+  id: string
+): Promise<PredictionStatusResult> {
+  const { status, outputUrls, error } = await pollStatusOnce(apiKey, id);
+
+  if (status === "completed" && outputUrls?.[0]) {
+    return { status: "completed", outputUrl: outputUrls[0] };
+  }
+
+  if (status === "failed") {
+    return {
+      status: "failed",
+      errorMessage: normalizeFashnError(error),
+      error,
+    };
+  }
+
+  return { status: "processing" };
+}
+
 export async function runAndPollPrediction(
   apiKey: string,
   modelName: string,
@@ -142,7 +168,7 @@ export async function runAndPollPrediction(
     const { status, outputUrls, error } = await pollStatusOnce(apiKey, id);
 
     if (status === "completed" && outputUrls?.[0]) {
-      return { ok: true, outputUrl: outputUrls[0] };
+      return { ok: true, outputUrl: outputUrls[0], predictionId: id };
     }
 
     if (status === "failed") {
@@ -150,6 +176,7 @@ export async function runAndPollPrediction(
         ok: false,
         errorMessage: normalizeFashnError(error),
         error,
+        predictionId: id,
       };
     }
 
@@ -160,5 +187,6 @@ export async function runAndPollPrediction(
     ok: false,
     errorMessage:
       "The generation took longer than expected (over 3 minutes). Please try again.",
+    predictionId: id,
   };
 }

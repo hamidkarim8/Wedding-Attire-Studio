@@ -107,6 +107,12 @@ type PersistRefs = {
   peopleCount: 1 | 2;
 };
 
+type PendingPrediction = {
+  id: string;
+  stage: "tryon" | "edit";
+  refs: PersistRefs;
+};
+
 export default function HomePage() {
   const [tab, setTab] = useState<Tab>("studio");
 
@@ -135,6 +141,9 @@ export default function HomePage() {
 
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [lastRefs, setLastRefs] = useState<PersistRefs | null>(null);
+  const [pendingPrediction, setPendingPrediction] =
+    useState<PendingPrediction | null>(null);
+  const [checkingPrediction, setCheckingPrediction] = useState(false);
 
   const [collection, setCollection] = useState<CollectionGridItem[]>([]);
 
@@ -143,7 +152,8 @@ export default function HomePage() {
     phase === "uploading-attire" ||
     phase === "uploading-background" ||
     phase === "generating" ||
-    phase === "finalising";
+    phase === "finalising" ||
+    checkingPrediction;
 
   const loadCollection = useCallback(async () => {
     const res = await fetch("/api/collection");
@@ -182,6 +192,8 @@ export default function HomePage() {
     setPhase("idle");
     setResultUrl(null);
     setLastRefs(null);
+    setPendingPrediction(null);
+    setCheckingPrediction(false);
   }, []);
 
   const persistCollection = async (params: PersistRefs & { resultUrl: string }) => {
@@ -215,6 +227,7 @@ export default function HomePage() {
 
   const runGenerateWithRefs = async (refs: PersistRefs) => {
     setPhase("generating");
+    setPendingPrediction(null);
 
     const genRes = await fetch("/api/generate", {
       method: "POST",
@@ -229,19 +242,34 @@ export default function HomePage() {
       }),
     });
 
-    const genJson = await genRes.json().catch(() => ({}));
+    const genJson = (await genRes.json().catch(() => ({}))) as {
+      error?: unknown;
+      resultUrl?: unknown;
+      predictionId?: unknown;
+      predictionStage?: unknown;
+    };
 
     if (!genRes.ok) {
       const msg =
-        typeof (genJson as { error?: unknown }).error === "string"
-          ? (genJson as { error: string }).error
+        typeof genJson.error === "string"
+          ? genJson.error
           : "Generation failed.";
+      if (
+        typeof genJson.predictionId === "string" &&
+        (genJson.predictionStage === "tryon" || genJson.predictionStage === "edit")
+      ) {
+        setPendingPrediction({
+          id: genJson.predictionId,
+          stage: genJson.predictionStage,
+          refs,
+        });
+      }
       setFormError(msg);
       setPhase("idle");
       return;
     }
 
-    const outUrl = (genJson as { resultUrl?: unknown }).resultUrl;
+    const outUrl = genJson.resultUrl;
     if (typeof outUrl !== "string") {
       setFormError("Generation returned an unexpected response.");
       setPhase("idle");
@@ -249,6 +277,7 @@ export default function HomePage() {
     }
 
     setPhase("finalising");
+    setPendingPrediction(null);
     setResultUrl(outUrl);
     await persistCollection({ ...refs, resultUrl: outUrl });
     setPhase("idle");
@@ -325,6 +354,69 @@ export default function HomePage() {
       return;
     }
     await handleGenerate();
+  };
+
+  const handleCheckPredictionStatus = async () => {
+    if (!pendingPrediction) return;
+
+    setCheckingPrediction(true);
+    setFormError(undefined);
+    setCollectionNote(undefined);
+
+    const res = await fetch("/api/generate/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        predictionId: pendingPrediction.id,
+        predictionStage: pendingPrediction.stage,
+        backgroundImageUrl: pendingPrediction.refs.backgroundUrl,
+      }),
+    });
+
+    const data = (await res.json().catch(() => ({}))) as {
+      status?: unknown;
+      resultUrl?: unknown;
+      error?: unknown;
+      predictionId?: unknown;
+      predictionStage?: unknown;
+    };
+
+    setCheckingPrediction(false);
+
+    if (
+      !res.ok &&
+      typeof data.predictionId === "string" &&
+      (data.predictionStage === "tryon" || data.predictionStage === "edit")
+    ) {
+      setPendingPrediction({
+        ...pendingPrediction,
+        id: data.predictionId,
+        stage: data.predictionStage,
+      });
+    }
+
+    if (res.ok && data.status === "completed" && typeof data.resultUrl === "string") {
+      setPendingPrediction(null);
+      setPhase("finalising");
+      setResultUrl(data.resultUrl);
+      await persistCollection({
+        ...pendingPrediction.refs,
+        resultUrl: data.resultUrl,
+      });
+      setPhase("idle");
+      return;
+    }
+
+    if (res.ok && data.status === "processing") {
+      setFormError("This FASHN job is still processing. Check again in a moment.");
+      return;
+    }
+
+    setFormError(
+      typeof data.error === "string"
+        ? data.error
+        : "Unable to check the generation status."
+    );
   };
 
   const canGenerate = Boolean(modelFile) && Boolean(attireFile) && !busy;
@@ -560,6 +652,28 @@ export default function HomePage() {
             {formError ? (
               <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
                 <p>{formError}</p>
+                {pendingPrediction ? (
+                  <div className="mt-4 rounded-lg border border-red-200 bg-white/70 p-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-red-800">
+                      FASHN job saved
+                    </p>
+                    <p className="mt-1 break-all text-xs text-red-700">
+                      Prediction ID: {pendingPrediction.id}
+                    </p>
+                    <p className="mt-2 text-xs text-red-700">
+                      If this was a timeout, the AI job may still finish. Check
+                      status instead of starting a brand-new generation.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void handleCheckPredictionStatus()}
+                      disabled={busy || checkingPrediction}
+                      className="mt-3 inline-flex rounded-lg bg-red-950/85 px-4 py-2 text-xs font-semibold text-white hover:bg-red-950 disabled:opacity-60"
+                    >
+                      {checkingPrediction ? "Checking..." : "Check final status"}
+                    </button>
+                  </div>
+                ) : null}
                 {isTimeoutOrSlowError && (
                   <button
                     type="button"
