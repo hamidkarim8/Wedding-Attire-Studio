@@ -11,49 +11,70 @@ import { ResultCard } from "@/components/ResultCard";
 
 type Tab = "studio" | "collection";
 type PoseStyle = "sitting" | "standing";
-type WorkflowPhase = "idle" | "uploading" | "generating" | "finalising";
+type WorkflowPhase =
+  | "idle"
+  | "uploading-model"
+  | "uploading-attire"
+  | "uploading-background"
+  | "generating"
+  | "finalising";
 
 function deriveSteps(hasBackground: boolean, phase: WorkflowPhase): StepRow[] {
-  const uploadState: StepRow["state"] =
-    phase === "uploading" ? "active" : phase === "idle" ? "upcoming" : "done";
-
-  let tryonState: StepRow["state"] = "upcoming";
-  if (phase === "generating") tryonState = "active";
-  else if (phase === "finalising") tryonState = "done";
-
-  let bgState: StepRow["state"] = "upcoming";
-  if (hasBackground) {
-    if (phase === "generating") bgState = "active";
-    else if (phase === "finalising") bgState = "done";
-  }
-
-  const finalizeDisplay: StepRow["state"] =
-    phase === "finalising" ? "active" : "upcoming";
+  const orderedIds = [
+    "upload-model",
+    "upload-attire",
+    ...(hasBackground ? ["upload-background"] : []),
+    "tryon",
+    "finalize",
+  ];
+  const activeIdByPhase: Record<WorkflowPhase, string | null> = {
+    idle: null,
+    "uploading-model": "upload-model",
+    "uploading-attire": "upload-attire",
+    "uploading-background": "upload-background",
+    generating: "tryon",
+    finalising: "finalize",
+  };
+  const activeId = activeIdByPhase[phase];
+  const activeIndex = activeId ? orderedIds.indexOf(activeId) : -1;
+  const getState = (id: string): StepRow["state"] => {
+    const stepIndex = orderedIds.indexOf(id);
+    if (stepIndex === -1 || activeIndex === -1) return "upcoming";
+    if (stepIndex < activeIndex) return "done";
+    if (stepIndex === activeIndex) return "active";
+    return "upcoming";
+  };
 
   return [
     {
-      id: "upload",
-      label: "Uploading images...",
+      id: "upload-model",
+      label: "Uploading model photo",
       visibility: true,
-      state: uploadState,
+      state: getState("upload-model"),
+    },
+    {
+      id: "upload-attire",
+      label: "Uploading wedding attire",
+      visibility: true,
+      state: getState("upload-attire"),
+    },
+    {
+      id: "upload-background",
+      label: "Uploading background scenery",
+      visibility: hasBackground,
+      state: getState("upload-background"),
     },
     {
       id: "tryon",
-      label: "Generating virtual try-on...",
+      label: "Generating virtual try-on",
       visibility: true,
-      state: tryonState,
-    },
-    {
-      id: "bg",
-      label: "Applying background scenery...",
-      visibility: hasBackground,
-      state: bgState,
+      state: getState("tryon"),
     },
     {
       id: "finalize",
-      label: "Finalising result...",
+      label: "Saving result to collection",
       visibility: true,
-      state: finalizeDisplay,
+      state: getState("finalize"),
     },
   ];
 }
@@ -118,7 +139,11 @@ export default function HomePage() {
   const [collection, setCollection] = useState<CollectionGridItem[]>([]);
 
   const busy =
-    phase === "uploading" || phase === "generating" || phase === "finalising";
+    phase === "uploading-model" ||
+    phase === "uploading-attire" ||
+    phase === "uploading-background" ||
+    phase === "generating" ||
+    phase === "finalising";
 
   const loadCollection = useCallback(async () => {
     const res = await fetch("/api/collection");
@@ -134,7 +159,9 @@ export default function HomePage() {
   }, [tab, loadCollection]);
 
   const showLoader =
-    phase === "uploading" ||
+    phase === "uploading-model" ||
+    phase === "uploading-attire" ||
+    phase === "uploading-background" ||
     phase === "generating" ||
     phase === "finalising";
 
@@ -243,7 +270,7 @@ export default function HomePage() {
       ? attireColor.toUpperCase()
       : null;
 
-    setPhase("uploading");
+    setPhase("uploading-model");
 
     const mUp = await uploadToServer(modelFile);
     if (!mUp.ok) {
@@ -252,6 +279,7 @@ export default function HomePage() {
       return;
     }
 
+    setPhase("uploading-attire");
     const aUp = await uploadToServer(attireFile);
     if (!aUp.ok) {
       setAttireUploadError(aUp.error);
@@ -261,6 +289,7 @@ export default function HomePage() {
 
     let backgroundUrl: string | null = null;
     if (backgroundFile) {
+      setPhase("uploading-background");
       const bUp = await uploadToServer(backgroundFile);
       if (!bUp.ok) {
         setBackgroundUploadError(bUp.error);

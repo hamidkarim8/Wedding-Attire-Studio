@@ -15,7 +15,7 @@ type Body = {
 };
 
 const EDIT_PROMPT =
-  "Follow exactly the background scenery as shown in the image context. Do not alter the people, attire, or faces. Only replace the background.";
+  "Follow the background scenery as shown in the image context. Adjust the sitting or standing position of the people to match the background scenery.";
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.FASHN_API_KEY;
