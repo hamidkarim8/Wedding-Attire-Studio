@@ -84,10 +84,10 @@ export function LoadingState({ steps }: { steps: StepRow[] }) {
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2 pr-20">
-          // <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-red-700 ring-1 ring-red-200">
-          //   <span className="h-2 w-2 animate-ping rounded-full bg-red-500" />
-          //   Live
-          // </span>
+          <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-red-700 ring-1 ring-red-200">
+            <span className="h-2 w-2 animate-ping rounded-full bg-red-500" />
+            Live
+          </span>
           <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-600 ring-1 ring-neutral-200">
             Running {elapsedLabel}
           </span>
