@@ -1,23 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 export type StepRow = {
   id: string;
   label: string;
   visibility: boolean;
   state: "upcoming" | "active" | "done";
 };
-
-export function Spinner({ small }: { small?: boolean }) {
-  const size = small ? "h-4 w-4 border-2" : "h-5 w-5 border-2";
-  return (
-    <span
-      className={`${size} rounded-full border-neutral-300 border-t-accent animate-spin`}
-      aria-hidden
-    />
-  );
-}
 
 function CheckMark() {
   return (
@@ -46,7 +34,6 @@ function CheckMark() {
 }
 
 export function LoadingState({ steps }: { steps: StepRow[] }) {
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const visibleSteps = steps.filter((s) => s.visibility !== false);
   const activeIndex = visibleSteps.findIndex((step) => step.state === "active");
   const doneCount = visibleSteps.filter((step) => step.state === "done").length;
@@ -55,18 +42,6 @@ export function LoadingState({ steps }: { steps: StepRow[] }) {
       ? Math.round(((doneCount + (activeIndex >= 0 ? 0.5 : 0)) / visibleSteps.length) * 100)
       : 0;
   const activeStep = activeIndex >= 0 ? visibleSteps[activeIndex] : null;
-  const elapsedLabel = `${Math.floor(elapsedSeconds / 60)}:${String(
-    elapsedSeconds % 60
-  ).padStart(2, "0")}`;
-
-  useEffect(() => {
-    setElapsedSeconds(0);
-    const timer = window.setInterval(() => {
-      setElapsedSeconds((current) => current + 1);
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, []);
 
   return (
     <div
@@ -75,28 +50,8 @@ export function LoadingState({ steps }: { steps: StepRow[] }) {
       role="status"
     >
       <div className="relative border-b border-neutral-100 bg-gradient-to-br from-accent/10 via-white to-neutral-50 p-6">
-        <div className="absolute right-6 top-6 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
-          <span className="absolute h-14 w-14 animate-ping rounded-full bg-accent/20" />
-          <span className="absolute h-10 w-10 animate-pulse rounded-full bg-accent/10" />
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-accent/30">
-            <span className="h-3 w-3 animate-ping rounded-full bg-accent" />
-            <span className="absolute h-3 w-3 rounded-full bg-accent" />
-          </span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 pr-20">
-          <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-red-700 ring-1 ring-red-200">
-            <span className="h-2 w-2 animate-ping rounded-full bg-red-500" />
-            Live
-          </span>
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-600 ring-1 ring-neutral-200">
-            Running {elapsedLabel}
-          </span>
-        </div>
-        <h2 className="mt-2 pr-16 text-lg font-semibold text-neutral-950">
+        <h2 className="text-lg font-semibold text-neutral-950">
           {activeStep?.label ?? "Preparing your result"}
-          <span className="inline-flex w-8 justify-start">
-            <span className="animate-pulse">...</span>
-          </span>
         </h2>
         <p className="mt-2 max-w-lg text-sm text-neutral-600">
           Stage {Math.max(activeIndex + 1, 1)} of {visibleSteps.length}. Keep this
@@ -129,7 +84,7 @@ export function LoadingState({ steps }: { steps: StepRow[] }) {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-neutral-900">
-              staticGenerationAsyncStorage..
+              Processing..
             </p>
             <p className="text-xs text-neutral-500">
               Please wait while we generate your virtual try-on. This may take a few minutes.
@@ -156,7 +111,12 @@ export function LoadingState({ steps }: { steps: StepRow[] }) {
                 {step.state === "done" ? (
                   <CheckMark />
                 ) : step.state === "active" ? (
-                  <Spinner />
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded-full border border-accent/60 bg-accent/10"
+                    aria-hidden
+                  >
+                    <span className="h-2 w-2 rounded-full bg-accent" />
+                  </span>
                 ) : (
                   <span className="flex h-5 w-5 items-center justify-center rounded-full border border-neutral-300 text-[10px] text-neutral-500">
                     ...
