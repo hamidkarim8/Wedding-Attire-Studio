@@ -15,7 +15,7 @@ export function ResultCard({
     <section className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4 sm:p-6">
       <h2 className="text-lg font-semibold text-neutral-900">Result</h2>
       <div className="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
-        {/* eslint-disable-next-line @next/next/no-img-element — dynamic CDN / result URL */}
+        {/* eslint-disable-next-line @next/next/no-img-element -- CDN and dynamic result URLs */}
         <img
           src={resultUrl}
           alt="Generated attire result"
