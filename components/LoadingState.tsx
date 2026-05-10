@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 export type StepRow = {
   id: string;
   label: string;
@@ -44,6 +46,7 @@ function CheckMark() {
 }
 
 export function LoadingState({ steps }: { steps: StepRow[] }) {
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const visibleSteps = steps.filter((s) => s.visibility !== false);
   const activeIndex = visibleSteps.findIndex((step) => step.state === "active");
   const doneCount = visibleSteps.filter((step) => step.state === "done").length;
@@ -52,6 +55,18 @@ export function LoadingState({ steps }: { steps: StepRow[] }) {
       ? Math.round(((doneCount + (activeIndex >= 0 ? 0.5 : 0)) / visibleSteps.length) * 100)
       : 0;
   const activeStep = activeIndex >= 0 ? visibleSteps[activeIndex] : null;
+  const elapsedLabel = `${Math.floor(elapsedSeconds / 60)}:${String(
+    elapsedSeconds % 60
+  ).padStart(2, "0")}`;
+
+  useEffect(() => {
+    setElapsedSeconds(0);
+    const timer = window.setInterval(() => {
+      setElapsedSeconds((current) => current + 1);
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
 
   return (
     <div
@@ -60,13 +75,23 @@ export function LoadingState({ steps }: { steps: StepRow[] }) {
       role="status"
     >
       <div className="relative border-b border-neutral-100 bg-gradient-to-br from-accent/10 via-white to-neutral-50 p-6">
-        <div className="absolute right-6 top-6 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-sm">
-          <span className="absolute h-9 w-9 animate-ping rounded-full bg-accent/20" />
-          <Spinner />
+        <div className="absolute right-6 top-6 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-sm">
+          <span className="absolute h-14 w-14 animate-ping rounded-full bg-accent/20" />
+          <span className="absolute h-10 w-10 animate-pulse rounded-full bg-accent/10" />
+          <span className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-accent/30">
+            <span className="h-3 w-3 animate-ping rounded-full bg-accent" />
+            <span className="absolute h-3 w-3 rounded-full bg-accent" />
+          </span>
         </div>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">
-          Processing
-        </p>
+        <div className="flex flex-wrap items-center gap-2 pr-20">
+          <span className="inline-flex items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-red-700 ring-1 ring-red-200">
+            <span className="h-2 w-2 animate-ping rounded-full bg-red-500" />
+            Live
+          </span>
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-neutral-600 ring-1 ring-neutral-200">
+            Running {elapsedLabel}
+          </span>
+        </div>
         <h2 className="mt-2 pr-16 text-lg font-semibold text-neutral-950">
           {activeStep?.label ?? "Preparing your result"}
           <span className="inline-flex w-8 justify-start">
@@ -87,8 +112,28 @@ export function LoadingState({ steps }: { steps: StepRow[] }) {
               className="relative h-full rounded-full bg-accent transition-all duration-700 ease-out"
               style={{ width: `${progress}%` }}
             >
-              <span className="absolute inset-0 -translate-x-full animate-[pulse_1.5s_ease-in-out_infinite] bg-white/35" />
+              <span className="loading-shimmer absolute inset-0 bg-white/45" />
             </div>
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center gap-4 rounded-xl border border-accent/20 bg-white/80 px-4 py-3 shadow-sm">
+          <div className="flex h-9 items-end gap-1" aria-hidden>
+            {[0, 1, 2, 3, 4].map((bar) => (
+              <span
+                key={bar}
+                className="loading-equalizer-bar w-1.5 rounded-full bg-accent"
+                style={{ animationDelay: `${bar * 0.12}s` }}
+              />
+            ))}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-neutral-900">
+              Still working — live activity detected
+            </p>
+            <p className="text-xs text-neutral-500">
+              The moving bars and timer will keep updating while the request runs.
+            </p>
           </div>
         </div>
       </div>

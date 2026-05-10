@@ -13,3 +13,32 @@ body {
   color: var(--foreground);
   background: var(--background);
 }
+
+.loading-shimmer {
+  animation: loading-shimmer 1.1s linear infinite;
+  transform: translateX(-100%);
+}
+
+.loading-equalizer-bar {
+  animation: loading-equalizer 0.9s ease-in-out infinite;
+  height: 28%;
+}
+
+@keyframes loading-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes loading-equalizer {
+  0%,
+  100% {
+    height: 24%;
+    opacity: 0.55;
+  }
+
+  50% {
+    height: 100%;
+    opacity: 1;
+  }
+}
