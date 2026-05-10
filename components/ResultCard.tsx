@@ -15,11 +15,11 @@ export function ResultCard({
     <section className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4 sm:p-6">
       <h2 className="text-lg font-semibold text-neutral-900">Result</h2>
       <div className="overflow-hidden rounded-lg border border-neutral-200 bg-neutral-100">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* eslint-disable-next-line @next/next/no-img-element — dynamic CDN / result URL */}
         <img
           src={resultUrl}
           alt="Generated attire result"
-          className="aspect-[3/4] w-full object-cover object-top sm:max-h-[620px]"
+          className="mx-auto block h-auto w-full max-h-[min(90vh,900px)] object-contain"
         />
       </div>
       <div className="flex flex-col gap-3 sm:flex-row">

@@ -21,7 +21,7 @@ export function buildTryOnPrompt(params: BuildPromptParams): string {
     );
   } else {
     parts.push(
-      "There are two people in the model photo — a groom and a bride. Apply the appropriate wedding attire to each person according to their gender."
+      "There are two people in the model photo — a groom and a bride. Apply the appropriate wedding attire as in the product image to each person according to their gender."
     );
   }
 
@@ -37,7 +37,7 @@ export function buildTryOnPrompt(params: BuildPromptParams): string {
 
   if (params.colorHex) {
     parts.push(
-      `The attire color should be ${params.colorHex}.`
+      `The attire color should be ${params.colorHex}. But keep the original design of the attire as it is according to the product image.`
     );
   }
 
